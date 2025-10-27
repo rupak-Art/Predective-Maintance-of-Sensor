@@ -1,0 +1,62 @@
+import pandas as pd
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report
+from xgboost import XGBClassifier
+
+# ============================
+# STEP 1: Load Dataset
+# ============================
+# Replace this with your actual dataset filename
+df = pd.read_csv("ai4i2020.csv")
+print("Loading is succesful...")
+
+# Drop useless ID columns
+df = df.drop(["UDI", "Product ID"], axis=1)
+
+# Encode categorical variable 'Type' into numeric (one-hot encoding)
+df = pd.get_dummies(df, columns=["Type"], drop_first=True)
+
+# Define features (X) and target (y)
+X = df.drop(columns=["Machine failure"], axis=1)  # 👈 replace "Target" with your target column name
+y = df["Machine failure"]
+
+# ============================
+# STEP 2: Split Data
+# ============================
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+
+# ============================
+# STEP 3: Scale Features
+# ============================
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# ============================
+# STEP 4: Train Model
+# ============================
+model = XGBClassifier(use_label_encoder=False, eval_metric="logloss", random_state=42)
+model.fit(X_train_scaled, y_train)
+
+# ============================
+# STEP 5: Evaluate Model
+# ============================
+y_pred = model.predict(X_test_scaled)
+report = classification_report(y_test, y_pred, digits=3)
+print("✅ Classification Report:\n", report)
+
+# Save classification report to file
+with open("classification_report.txt", "w") as f:
+    f.write(report)
+
+# ============================
+# STEP 6: Save Model + Scaler
+# ============================
+joblib.dump(model, "model.pkl")
+joblib.dump(scaler, "scaler.pkl")
+
+print("✅ Model and scaler saved as model.pkl and scaler.pkl")
